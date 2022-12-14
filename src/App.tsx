@@ -18,7 +18,11 @@ import {
   hashTypedDataMessage,
   hashMessage,
 } from "./helpers/utilities";
-import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
+import {
+  convertAmountToRawNumber,
+  convertStringToHex,
+  convertHexToString,
+} from "./helpers/bignumber";
 import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
@@ -166,6 +170,8 @@ class App extends React.Component<any, any> {
 
     // create new connector
     const connector = new WalletConnect({ bridge, qrcodeModal: QRCodeModal });
+
+    console.log("connector:", connector);
 
     await this.setState({ connector });
 
@@ -626,6 +632,51 @@ class App extends React.Component<any, any> {
     }
   };
 
+  public testSendCustomRequest = async () => {
+    const { connector, address, chainId } = this.state;
+
+    if (!connector) {
+      return;
+    }
+    try {
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      // Draft Custom Request
+      const customRequest = {
+        id: 1,
+        jsonrpc: "2.0",
+        method: "eth_getBalance",
+        params: [address, "latest"],
+      };
+
+      // sendCustomRequest result
+      const result = await connector.sendCustomRequest(customRequest);
+      const weiBalance = convertHexToString(result);
+
+      // format displayed result
+      const formattedResult = {
+        method: "eth_getBalance",
+        address,
+        chainId,
+        weiBalance,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
+
   public render = () => {
     const {
       assets,
@@ -683,6 +734,9 @@ class App extends React.Component<any, any> {
                     </STestButton>
                     <STestButton left onClick={this.testPersonalSignMessage}>
                       {"personal_sign"}
+                    </STestButton>
+                    <STestButton left onClick={this.testSendCustomRequest}>
+                      {"sendCustomRequest"}
                     </STestButton>
                   </STestButtonContainer>
                 </Column>
