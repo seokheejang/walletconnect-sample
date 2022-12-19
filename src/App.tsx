@@ -362,81 +362,6 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public testSignTransaction = async () => {
-    const { connector, address, chainId } = this.state;
-
-    if (!connector) {
-      return;
-    }
-
-    // from
-    const from = address;
-
-    // to
-    const to = address;
-
-    // nonce
-    const _nonce = await apiGetAccountNonce(address, chainId);
-    const nonce = sanitizeHex(convertStringToHex(_nonce));
-
-    // gasPrice
-    const gasPrices = await apiGetGasPrices();
-    const _gasPrice = gasPrices.slow.price;
-    const gasPrice = sanitizeHex(convertStringToHex(convertAmountToRawNumber(_gasPrice, 9)));
-
-    // gasLimit
-    const _gasLimit = 21000;
-    const gasLimit = sanitizeHex(convertStringToHex(_gasLimit));
-
-    // value
-    const _value = 0;
-    const value = sanitizeHex(convertStringToHex(_value));
-
-    // data
-    const data = "0x";
-
-    // test transaction
-    const tx = {
-      from,
-      to,
-      nonce,
-      gasPrice,
-      gasLimit,
-      value,
-      data,
-    };
-
-    try {
-      // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
-
-      // send transaction
-      const result = await connector.signTransaction(tx);
-
-      // format displayed result
-      const formattedResult = {
-        method: "eth_signTransaction",
-        from: address,
-        to: address,
-        value: `${_value} ETH`,
-        result,
-      };
-
-      // display result
-      this.setState({
-        connector,
-        pendingRequest: false,
-        result: formattedResult || null,
-      });
-    } catch (error) {
-      console.error(error);
-      this.setState({ connector, pendingRequest: false, result: null });
-    }
-  };
-
   public testLegacySignMessage = async () => {
     const { connector, address, chainId } = this.state;
 
@@ -450,6 +375,7 @@ class App extends React.Component<any, any> {
     // hash message
     const hash = hashMessage(message);
 
+    console.log("hash", hash);
     // eth_sign params
     const msgParams = [address, hash];
 
@@ -469,56 +395,6 @@ class App extends React.Component<any, any> {
       // format displayed result
       const formattedResult = {
         method: "eth_sign (legacy)",
-        address,
-        valid,
-        result,
-      };
-
-      // display result
-      this.setState({
-        connector,
-        pendingRequest: false,
-        result: formattedResult || null,
-      });
-    } catch (error) {
-      console.error(error);
-      this.setState({ connector, pendingRequest: false, result: null });
-    }
-  };
-
-  public testStandardSignMessage = async () => {
-    const { connector, address, chainId } = this.state;
-
-    if (!connector) {
-      return;
-    }
-
-    // test message
-    const message = `My email is john@doe.com - ${new Date().toUTCString()}`;
-
-    // encode message (hex)
-    const hexMsg = convertUtf8ToHex(message);
-
-    // eth_sign params
-    const msgParams = [address, hexMsg];
-
-    try {
-      // open modal
-      this.toggleModal();
-
-      // toggle pending request indicator
-      this.setState({ pendingRequest: true });
-
-      // send message
-      const result = await connector.signMessage(msgParams);
-
-      // verify signature
-      const hash = hashMessage(message);
-      const valid = await verifySignature(address, result, hash, chainId);
-
-      // format displayed result
-      const formattedResult = {
-        method: "eth_sign (standard)",
         address,
         valid,
         result,
@@ -559,6 +435,7 @@ class App extends React.Component<any, any> {
       // toggle pending request indicator
       this.setState({ pendingRequest: true });
 
+      console.log("hexMsg", hexMsg);
       // send message
       const result = await connector.signPersonalMessage(msgParams);
 
@@ -632,7 +509,7 @@ class App extends React.Component<any, any> {
     }
   };
 
-  public testSendCustomRequest = async () => {
+  public testGetBalance = async () => {
     const { connector, address, chainId } = this.state;
 
     if (!connector) {
@@ -663,6 +540,48 @@ class App extends React.Component<any, any> {
         address,
         chainId,
         weiBalance,
+      };
+
+      // display result
+      this.setState({
+        connector,
+        pendingRequest: false,
+        result: formattedResult || null,
+      });
+    } catch (error) {
+      console.error(error);
+      this.setState({ connector, pendingRequest: false, result: null });
+    }
+  };
+
+  public testWalletSwitchEthereumChain = async () => {
+    const { connector, address, chainId } = this.state;
+
+    if (!connector) {
+      return;
+    }
+    try {
+      // open modal
+      this.toggleModal();
+
+      // toggle pending request indicator
+      this.setState({ pendingRequest: true });
+
+      const chainParams = {
+        id: 1,
+        jsonrpc: "2.0",
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x5" }],
+      };
+
+      // sendCustomRequest result
+      await connector.sendCustomRequest(chainParams);
+
+      // format displayed result
+      const formattedResult = {
+        method: "wallet_switchEthereumChain",
+        address,
+        chainId,
       };
 
       // display result
@@ -720,23 +639,20 @@ class App extends React.Component<any, any> {
                     <STestButton left onClick={this.testSendTransaction}>
                       {"eth_sendTransaction"}
                     </STestButton>
-                    <STestButton left onClick={this.testSignTransaction}>
-                      {"eth_signTransaction"}
-                    </STestButton>
                     <STestButton left onClick={this.testSignTypedData}>
                       {"eth_signTypedData"}
                     </STestButton>
                     <STestButton left onClick={this.testLegacySignMessage}>
                       {"eth_sign (legacy)"}
                     </STestButton>
-                    <STestButton left onClick={this.testStandardSignMessage}>
-                      {"eth_sign (standard)"}
-                    </STestButton>
                     <STestButton left onClick={this.testPersonalSignMessage}>
                       {"personal_sign"}
                     </STestButton>
-                    <STestButton left onClick={this.testSendCustomRequest}>
-                      {"sendCustomRequest"}
+                    <STestButton left onClick={this.testGetBalance}>
+                      {"eth_getBalance"}
+                    </STestButton>
+                    <STestButton left onClick={this.testWalletSwitchEthereumChain}>
+                      {"wallet_switchEthereumChain"}
                     </STestButton>
                   </STestButtonContainer>
                 </Column>
